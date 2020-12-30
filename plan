@@ -1,0 +1,23 @@
+JSON Packet types:
+  message
+
+  turtle_command
+      movement
+      rotation
+      pickup_blocks
+
+  turtle_command_args
+      sign-based chat
+      name_change
+      drop_blocks
+      craft
+      custom_command
+
+  turtle_data
+      map_data
+      location_data
+      system_data
+          name
+          inventory
+          currentselectedslot
+          fuel_level
