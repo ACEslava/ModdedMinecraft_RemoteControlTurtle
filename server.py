@@ -28,10 +28,11 @@ class message_data(): #json packet parser
             return json.loads(message)
         
 async def hello(websocket, path):
-    while True:
-        message = await websocket.recv()
-        message = message_data.JSON_to_message(message)
-        print(message)
+    websocket.broadcast = 
+    async for receivedmessage in websocket:
+        print(receivedmessage)
+        receivedmessage = message_data.JSON_to_message(receivedmessage)
+        await websocket.send(receivedmessage)
         
         # if message["message"]["message_type"] == "connected":
         #     print(f'[{message["sender"]}] Connected')

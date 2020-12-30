@@ -1,13 +1,19 @@
+#!/usr/bin/env python
+
+# WS client example
+
 import asyncio
 import websockets
-import time
 
-async def hello(websocket, path):
-    async for receive in websocket:
-        print(receive)
-        await websocket.send(receive)
+async def hello():
+    uri = "ws://29dec293ffd7.ngrok.io"
+    async with websockets.connect(uri) as websocket:
+        name = input("What's your name? ")
 
-start_server = websockets.serve(hello, "localhost", 1000)
+        await websocket.send(name)
+        print(f"> {name}")
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+        greeting = await websocket.recv()
+        print(f"< {greeting}")
+
+asyncio.get_event_loop().run_until_complete(hello())

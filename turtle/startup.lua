@@ -7,18 +7,20 @@ os.loadAPI("json")
 print("Resolved")
 
 function websocketLoop()
+
     print("Connecting to websocket")
-    ws, err = http.websocket("ws://9ab36025f046.ngrok.io")
+    ws, err = http.websocket("ws://29dec293ffd7.ngrok.io")
     if err then
         print(err)
-        ws.close()
         return
     end
     print("Connected")
-    response = ws.receive()
-    print(response)
+    while true do
+        local response = ws.receive()
+        print(response)
+    end
+
+    ws.close()
 end
 
-while true do
-    websocketLoop()
-end
+websocketLoop()
