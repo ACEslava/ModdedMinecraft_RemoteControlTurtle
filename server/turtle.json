@@ -1,0 +1,36 @@
+{
+    "admiring_ramanujan": {
+        "id": 29,
+        "label": "admiring_ramanujan",
+        "fuel": 0,
+        "maxFuel": 20000,
+        "selectedSlot": 1,
+        "inventory": [
+            {
+                "count": 1,
+                "name": "minecraft:coal_block",
+                "damage": 0
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "location": {
+            "y": 4,
+            "x": 0,
+            "z": 0
+        }
+    }
+}

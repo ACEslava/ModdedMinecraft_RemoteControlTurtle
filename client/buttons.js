@@ -1,5 +1,5 @@
 const ws = new WebSocket("ws://localhost:1000");
-    
+
     class message {
         constructor(recipient, message_type, content){
             this.recipient = recipient
@@ -21,7 +21,7 @@ const ws = new WebSocket("ws://localhost:1000");
     
     ws.addEventListener('open', (event) => {
         console.log("Connected to Server");
-        let connection = new message("Server", "connected", null)
+        let connection = new message("Server", "client_connect", null)
         ws.send(connection.generate())
     });
     
@@ -36,6 +36,23 @@ const ws = new WebSocket("ws://localhost:1000");
 
     //ButtonPressFunctions
     function rotateCW(){
-        let usermessage = new message("Turtle", "turtlecommand", "return turtle.turnRight()");
-        ws.send(usermessage.generate())
+        let turtlemessage = new message("Turtle", "turtle_custom_command", "return turtle.turnRight()");
+        ws.send(turtlemessage.generate())
+    }
+
+    function rotateCCW(){
+        let turtlemessage = new message("Turtle", "turtle_custom_command", "return turtle.turnLeft()");
+        ws.send(turtlemessage.generate())
+    }
+
+    function customcommand(){
+        let customcommand = document.getElementById("customcommand").value
+        let turtlemessage = new message("Turtle", "turtle_custom_command", customcommand);
+        ws.send(turtlemessage.generate())
+    }
+
+    function definedcommand(){
+        let definedcommand = document.getElementById("definedcommand").value
+        let turtlemessage = new message("Turtle", "turtle_command", definedcommand);
+        ws.send(turtlemessage.generate())
     }

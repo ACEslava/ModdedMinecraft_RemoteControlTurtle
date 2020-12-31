@@ -1,23 +1,25 @@
-JSON Packet types:
-  message
+JSON Packets:
+    turtle_connect: null
+    client_connect: null
+    message: any 
 
-  turtle_command
-      movement
-      rotation
-      pickup_blocks
+    turtle_command
+        movement: direction [str]
+        rotation: direction [str]
+        pickup_blocks: direction [str]
 
-  turtle_command_args
-      sign-based chat
-      name_change
-      drop_blocks
-      craft
-      custom_command
+    turtle_command_args
+        sign-based chat: sign contents [str]
+        name_change: name [str]
+        drop_blocks: block to drop [str], quantity [int]
+        craft: item to craft [str], quantity [int]
+        custom_command: any
 
-  turtle_data
-      map_data
-      location_data
-      system_data
-          name
-          inventory
-          currentselectedslot
-          fuel_level
+    turtle_data
+        map_data: null
+        location_data: null
+        system_data
+            name: name [str]
+            inventory: inventory contents [str]
+            currentselectedslot: slot number [int]
+            fuel_level: fuel number [int]

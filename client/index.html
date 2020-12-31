@@ -1,12 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script type="text/javascript" src="buttons.js"></script>
 </head>
 <body>
     <h1>Turtle Control</h1>
     <div class='Controls'>
-        <button type="button" onclick="rotateCW()">Rotate Clockwise</input>
+        <button type="button" onclick="rotateCW()">Rotate CW</input>
+        <button type="button" onclick="rotateCCW()">Rotate CCW</input>
     </div>
+    <p>
+    <label for="fname">Custom Command:</label>
+    <input type="text" id="customcommand" name="customcommand"></input>
+    <button type="button" onclick="customcommand()">Execute</button>
+    </p>
+    <p>
+    <label for="fname">BuiltIn Command:</label>
+    <input type="text" id="definedcommand" name="definedcommand"></input>
+    <button type="button" onclick="definedcommand()">Execute</button>
+    </p>
 </body>
+<script type="text/javascript" src="buttons.js"></script>
 </html>
