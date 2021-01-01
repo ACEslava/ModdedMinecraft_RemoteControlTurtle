@@ -1,0 +1,16 @@
+{
+    "0,3,0": {
+        "state": {
+            "snowy": false
+        },
+        "name": "minecraft:grass",
+        "metadata": 0
+    },
+    "-2,3,0": {
+        "state": {
+            "snowy": false
+        },
+        "name": "minecraft:grass",
+        "metadata": 0
+    }
+}

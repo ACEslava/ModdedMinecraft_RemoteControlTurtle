@@ -1,23 +1,36 @@
 <!DOCTYPE html>
 <html>
-<head>
-</head>
-<body>
-    <h1>Turtle Control</h1>
-    <div class='Controls'>
-        <button type="button" onclick="rotateCW()">Rotate CW</input>
-        <button type="button" onclick="rotateCCW()">Rotate CCW</input>
-    </div>
-    <p>
-    <label for="fname">Custom Command:</label>
-    <input type="text" id="customcommand" name="customcommand"></input>
-    <button type="button" onclick="customcommand()">Execute</button>
-    </p>
-    <p>
-    <label for="fname">BuiltIn Command:</label>
-    <input type="text" id="definedcommand" name="definedcommand"></input>
-    <button type="button" onclick="definedcommand()">Execute</button>
-    </p>
-</body>
-<script type="text/javascript" src="buttons.js"></script>
+	<head>
+		<meta charset="utf-8">
+		<title>My first three.js app</title>
+		<style>
+			body { margin: 0; }
+		</style>
+		<script src="src/jQuery.min.js"></script>
+		<script src="src/three.min.js"></script>
+		<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+		<script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/loaders/GLTFLoader.js"></script>
+	</head>
+	<body>
+		<h1>Turtle Control</h1>
+		<p>
+		<select id="turtle-dropdown" name="turtle"></select>	
+		</p>
+		<div class='Controls'>
+			<button type="button" onclick="rotateCW()">Rotate CW</input>
+			<button type="button" onclick="rotateCCW()">Rotate CCW</input>
+			<button type="button" onclick="updateAll()">Update All</input>
+		</div>
+		<p>
+		<label for="fname">Custom Command:</label>
+		<input type="text" id="customcommand" name="customcommand"></input>
+		<button type="button" onclick="customCommand()">Execute</button>
+		</p>
+		<p>
+		<label for="fname">BuiltIn Command:</label>
+		<input type="text" id="definedcommand" name="definedcommand"></input>
+		<button type="button" onclick="definedCommand()">Execute</button>
+		</p>
+		<script src="scene.js"></script>
+	</body>
 </html>

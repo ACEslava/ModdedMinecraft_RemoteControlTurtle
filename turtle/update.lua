@@ -1,0 +1,5 @@
+print("Updating")
+shell.run("rm startup")
+shell.run("pastebin get 9ZUsQSFd startup")
+print("Update successful")
+os.reboot()

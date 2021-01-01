@@ -5,10 +5,15 @@ import funkybob
 import pickle
 from turtle import Turtle
 import os
+import subprocess
+import time
+import webbrowser
+
 
 FILE_DIR = os.path.dirname(os.path.realpath(__file__))
 CONNECTED = set()
 TURTLES = dict()
+PORT = 1000
 
 class message_data(): #json packet parser
         def __init__(self, sender:str, recipient:str, message_type:str, content = None):
@@ -55,15 +60,19 @@ async def connect(websocket, path):
             if message.recipient != "Server": #echos msg if recipient not server
                 await asyncio.create_task(broadcast(message.encodeJSON()))
 
-            elif message.sender == "Client": #checks if sender is client
+            if message.sender == "Client": #checks if sender is client
                 if message.message_type == "client_connect":
                     print(f'[Client] Connected')
-
+                if message.content == "return turtle.turnRight()":
+                    Turtle.turnRight(message)
+                if message.content == "return turtle.turnLeft()":
+                    Turtle.turnLeft(message)
+                    
             else: #thus sender is turtle if not client or server
                 TURTLES[message.sender] = websocket #adds turtle to current working list of connected turtles
                 if message.message_type == "turtle_connect":
                     print(f'[{message.sender}] Connected')
-                    turtle = Turtle.jsonToObject(message.content) #converts message into Turtle object
+                    turtle = Turtle.luaJsonToObject(message.content) #converts message into Turtle object
 
                     if message.sender == 'Unnamed': #renames unnamed turtle
                         with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db: #opens turtle database
@@ -88,10 +97,25 @@ async def connect(websocket, path):
                 elif message.message_type == "information":
                     with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db:
                         database = json.load(db)
-                    turtle = Turtle.jsonToObject(message.content)
+                    turtle = Turtle.luaJsonToObject(message.content)
                     database[turtle.label] = turtle.__dict__
                     with open(os.path.join(FILE_DIR, 'turtle.json'), 'w') as db:
                         json.dump(database,db, indent=4)
+                
+                elif message.message_type == "map":
+                    Turtle.map(message)
+                    await asyncio.create_task(broadcast(message.encodeJSON()))
+
+                elif message.message_type == "query":
+                    query = message.content
+                    with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db:
+                        database = json.load(db)
+                    if query == "location":
+                        locationdata = ' '.join([str(i) for i in database[message.sender][query]]).strip() #converts table to space-sep. string
+                        result = message_data("Server", message.sender, "query_response", {"query":query, "response":locationdata})
+                    else:
+                        result = message_data("Server", message.sender, "query_response", {"query":query, "response":database[message.sender][query]})
+                    await websocket.send(result.encodeJSON())
 
     except Exception as e:
         print(e)
@@ -105,7 +129,26 @@ async def connect(websocket, path):
             del TURTLES[turtle.label]
             print(str(TURTLES))
 
-start_server = websockets.serve(connect, "localhost", 1000)
+def main():
+    proc = subprocess.Popen(['python', '-u', '-m', 'http.server', str(PORT+1)],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            shell=True)
+    try:
+        time.sleep(0.2)
+        webbrowser.open(f'http://localhost:{PORT+1}/client')
+        
+        start_server = websockets.serve(connect, "localhost", PORT)
+        asyncio.get_event_loop().run_until_complete(start_server)
+        asyncio.get_event_loop().run_forever()      
+    
+    finally:
+        proc.terminate()
+        try:
+            outs, _ = proc.communicate(timeout=0.2)
+            print('== subprocess exited with rc =', proc.returncode)
+            print(outs.decode('utf-8'))
+        except subprocess.TimeoutExpired:
+            print('subprocess did not terminate in time')
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+main()
