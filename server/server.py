@@ -64,6 +64,7 @@ async def connect(websocket, path):
             if message.sender == "Client": #checks if sender is client
                 if message.message_type == "client_connect":
                     print(f'[Client] Connected')
+                
                 if message.content == "return turtle.turnRight()":
                     Turtle.turnRight(message)
                     with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db:
@@ -139,15 +140,8 @@ async def connect(websocket, path):
                         await asyncio.create_task(broadcast(connectedmessage.encodeJSON())) #tells client that bot connected
 
                     else:
-                        with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db:
-                            database = json.load(db)
-                        turtle = Turtle.luaJsonToObject(message.content, True)
-                        database[turtle.label] = turtle.__dict__
-                        infomessage = message_data("Server", "Client", "information", {turtle.label:turtle.__dict__}) #sends client the information
+                        infomessage = message_data("Server", "Client", "information", Turtle.information()) #sends client the information
                         await asyncio.create_task(broadcast(infomessage.encodeJSON()))
-
-                        with open(os.path.join(FILE_DIR, 'turtle.json'), 'w') as db:
-                            json.dump(database,db, indent=4)
                 
                 elif message.message_type == "map":
                     Turtle.map(message)
@@ -164,6 +158,9 @@ async def connect(websocket, path):
                     else:
                         result = message_data("Server", message.sender, "query_response", {"query":query, "response":database[message.sender][query]})
                     await websocket.send(result.encodeJSON())
+                
+                elif message.message_type == "error":
+                    print(message.content)
 
     except Exception as e:
         print(e)
@@ -227,4 +224,3 @@ main()
 
 forever = threading.Event
 forever.wait()
-    

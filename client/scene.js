@@ -252,74 +252,7 @@ function updateTurtleList(turtleinfo, isconnecting) {
     }
 }
 
-// ThreeJS Scene
-var scene = new THREE.Scene();
-
-var camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight, 1,10000);
-camera.position.set( 0, -10, 5);
-camera.up = new THREE.Vector3(0,0,1);
-camera.lookAt(new THREE.Vector3(0,0,0));
-
-
-var renderer = new THREE.WebGLRenderer({alpha: true});
-renderer.setClearColor( 0xffffff, 0);
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-const light = new THREE.PointLight( 0xffffff, 5);
-light.position.set( 50, 50, 50 );
-scene.add( light );
-
-for (var keys in blocklist){
-    if (scene.getObjectByName(keys) == null){
-        coords = keys.split`,`.map(x=>+x)
-        
-        value = blocklist[keys]
-        colour = colourFromString(value.name)
-
-        cube(colour, coords[0], coords[1], coords[2], keys)
-    }
-    blockgroup.traverse(function(object){
-        console.log(object.name)
-        if (!(object.name in blocklist)){
-            scene.remove(object)
-        }
-    });
-}
-
-Object.keys(turtlelist).forEach(function(key){
-    console.log(key)
-    console.log(turtlelist[key])
-    if (scene.getObjectByName(key) == null){
-        [x,y,z,rot] = turtlelist[key].location
-        turtle(x, y, z, rot, turtlelist[key].label)
-    }
-})
-
-scene.add(turtlegroup)
-scene.add(blockgroup)
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.update();
-
-function render() {
-    renderer.render(scene, camera)
-    requestAnimationFrame(render);
-    controls.update();;
-}
-
-render();
-
 //ButtonPressFunctions
-function rotateCW(){
-    let turtlemessage = new message(selectedturtle, "turtle_custom_command", "return turtle.turnRight()");
-    ws.send(turtlemessage.generate())
-}
-
-function rotateCCW(){
-    let turtlemessage = new message(selectedturtle, "turtle_custom_command", "return turtle.turnLeft()");
-    ws.send(turtlemessage.generate())
-}
-
 function updateAll(){
     $.getJSON(turtledb, function(data) {
         $.each(data, function (key, entry) {
@@ -343,7 +276,7 @@ function definedCommand(){
 
 document.addEventListener("keydown", event => {
     if (event.isComposing || event.keyCode === 87) {
-        let turtlemessage = new message(selectedturtle, "turtle_custom_command", "return turtle.forward()");
+        let turtlemessage = new message(selectedturtle, "turtle_command", "move forward");
         ws.send(turtlemessage.generate())
     }
 
@@ -352,16 +285,74 @@ document.addEventListener("keydown", event => {
         ws.send(turtlemessage.generate())
     }
 
-    if (event.isComposing || event.keyCode === 81) {
-        let turtlemessage = new message(selectedturtle, "turtle_custom_command", "return turtle.turnRight()");
-        ws.send(turtlemessage.generate())
+    // if (event.isComposing || event.keyCode === 81) {
+    //     let turtlemessage = new message(selectedturtle, "turtle_command", "return turtle.turnRight()");
+    //     ws.send(turtlemessage.generate())
+    // }
+
+    // if (event.isComposing || event.keyCode === 69) {
+    //     let turtlemessage = new message(selectedturtle, "turtle_custom_command", "return turtle.turnLeft()");
+    //     ws.send(turtlemessage.generate())
+    // }
+});
+
+// ThreeJS Scene
+function initThreeJS() {
+    var scene = new THREE.Scene();
+
+    var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+    camera.position.set(0, -10, 5);
+    camera.up = new THREE.Vector3(0, 0, 1);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+
+    var renderer = new THREE.WebGLRenderer({ alpha: true });
+    renderer.setClearColor(0xffffff, 0);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const light = new THREE.PointLight(0xffffff, 5);
+    light.position.set(50, 50, 50);
+    scene.add(light);
+
+    for (var keys in blocklist) {
+        if (scene.getObjectByName(keys) == null) {
+            coords = keys.split`,`.map(x => +x);
+
+            value = blocklist[keys];
+            colour = colourFromString(value.name);
+
+            cube(colour, coords[0], coords[1], coords[2], keys);
+        }
+        blockgroup.traverse(function (object) {
+            console.log(object.name);
+            if (!(object.name in blocklist)) {
+                scene.remove(object);
+            }
+        });
     }
 
-    if (event.isComposing || event.keyCode === 69) {
-        let turtlemessage = new message(selectedturtle, "turtle_custom_command", "return turtle.turnLeft()");
-        ws.send(turtlemessage.generate())
-    }
-});
+    Object.keys(turtlelist).forEach(function (key) {
+        console.log(key);
+        console.log(turtlelist[key]);
+        if (scene.getObjectByName(key) == null) {
+            [x, y, z, rot] = turtlelist[key].location;
+            turtle(x, y, z, rot, turtlelist[key].label);
+        }
+    });
+
+    scene.add(turtlegroup);
+    scene.add(blockgroup);
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.update();
+    return { scene, keys, renderer, camera, controls };
+}
+
+function render() {
+    renderer.render(scene, camera)
+    requestAnimationFrame(render);
+    controls.update();;
+}
 
 //Dropdown
 dropdown.empty();
@@ -374,8 +365,12 @@ $.getJSON(turtledb, function(data) {
         }
     })
 });
+
 //Dropdown change recipient
 dropdownselection.addEventListener('change', (event) => {
     selectedturtle = document.getElementById("turtle-dropdown").value
     object = scene.getObjectByName(selectedturtle)
 });
+
+initThreeJS();
+render();

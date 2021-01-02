@@ -2,6 +2,9 @@ X = 0
 Y = 0
 Z = 0
 A = 0
+isFuelLow = false
+stopAutomation = false
+
 ----BEGIN JSON LIBRARY
 --utils
 local controls = {["\n"]="\\n", ["\r"]="\\r", ["\t"]="\\t", ["\b"]="\\b", ["\f"]="\\f", ["\""]="\\\"", ["\\"]="\\\\"}
@@ -224,47 +227,6 @@ function map()
     return turtleinfo
 end
 
-function turtleCommands(command, ...)
-    arg = arg[1]
-    if command == "rename" then
-        os.setComputerLabel(arg[1])
-        print("Rename successful")
-        return
-
-    elseif command == "information" then
-        return information()
-
-    elseif command == "location" then
-        X = tonumber(arg[1])
-        Y = tonumber(arg[2])
-        Z = tonumber(arg[3])
-        A = tonumber(arg[4])
-        
-        ws.send(textutils.serialiseJSON(map()))
-        ws.send(textutils.serialiseJSON(information()))
-        return
-    
-    elseif command == "map" then
-        return map()
-    elseif command == "update" then
-        ws.close()
-        shell.run("update")
-    elseif command == "refuel" then
-        for slotnumber = 1, 16 do --reads inventory
-            local currentSlotDetail = turtle.getItemDetail(slotnumber)
-            if currentSlotDetail ~= nil then
-                for _, block in pairs({"minecraft:coal", "minecraft:coal_block"}) do
-                    if currentSlotDetail["name"] == block then
-                        turtle.select(slotnumber)
-                        turtle.refuel()
-                    end
-                end
-            end 
-        end
-        turtle.select(1)
-    end
-end
-
 function initialInformation()
     
     label = ""
@@ -313,6 +275,78 @@ function queryDatabase(querycontent)
     return query
 end
 
+function turtleCommands(command, ...)
+    arg = arg[1]
+    if command == "rename" then
+        os.setComputerLabel(arg[1])
+        print("Rename successful")
+        return
+
+    elseif command == "information" then
+        return information()
+
+    elseif command == "location" then
+        X = tonumber(arg[1])
+        Y = tonumber(arg[2])
+        Z = tonumber(arg[3])
+        A = tonumber(arg[4])
+        
+        ws.send(textutils.serialiseJSON(map()))
+        ws.send(textutils.serialiseJSON(information()))
+        return
+    
+    elseif command == "map" then
+        return map()
+    elseif command == "update" then
+        ws.close()
+        shell.run("update")
+    elseif command == "refuel" then
+        for slotnumber = 1, 16 do --reads inventory
+            local currentSlotDetail = turtle.getItemDetail(slotnumber)
+            if currentSlotDetail ~= nil then
+                for _, block in pairs({"minecraft:coal", "minecraft:coal_block"}) do
+                    if currentSlotDetail["name"] == block then
+                        turtle.select(slotnumber)
+                        turtle.refuel()
+                    end
+                end
+            end 
+        end
+        turtle.select(1)
+    elseif command == "move" then
+        if arg[1] == "forward" then
+            if A == 0 then
+                Y = Y - 1
+            elseif A == 90 then
+                X = X + 1
+            elseif A == 180 then
+                Y = Y + 1
+            elseif A == 270 then
+                X = X - 1
+            end
+
+            turtle.forward()
+            ws.send(textutils.serialiseJSON(information()))
+            ws.send(textutils.serialiseJSON(map()))
+            ws.send(textutils.serialiseJSON(queryDatabase("location")))
+
+        elseif arg[1] == "backward" then
+            if A == 0 then
+                Y = Y + 1
+            elseif A == 90 then
+                X = X - 1
+            elseif A == 180 then
+                Y = Y - 1
+            elseif A == 270 then
+                X = X + 1
+            end
+            turtle.backward()
+            ws.send(textutils.serialiseJSON(information()))
+            ws.send(textutils.serialiseJSON(map()))
+        end    
+    end
+end
+
 function websocketLoop()
 
     print("Connecting to websocket")
@@ -335,6 +369,18 @@ function websocketLoop()
         else
             message = decode(message)
             if message["recipient"] == label then --blocks messages not for turtle
+                if isFuelLow == true then --checks if fuel low, sends to server
+                    local message = {
+                        ["sender"] = label,
+                        ["recipient"] = "Server",
+                        ["message"] = {
+                            ["message_type"] = "error",
+                            ["content"] = "Fuel Low"
+                        }
+                    }
+                    ws.send(textutils.serialiseJSON(message))
+                end
+
                 print(message["message"]["content"])
                 if message["message"]["message_type"] == "turtle_custom_command" then
                     local func = loadstring(message["message"]["content"])
@@ -360,11 +406,6 @@ end
 
 --checks if libraries imported
 print("Checking if dependencies resolved")
-if shell.resolveProgram("json") == nil then 
-    shell.run("pastebin get PrfB3RYb json")
-    print("Resolving json dependency")
-    os.loadAPI("json")
-end
 if shell.resolveProgram("update") == nil then
     shell.run("pastebin get s5BEck0q update")
     print("Resolving update dependency")

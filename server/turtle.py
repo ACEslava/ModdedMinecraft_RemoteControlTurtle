@@ -137,3 +137,15 @@ class Turtle():
         with open(os.path.join(FILE_DIR, 'turtle.json'), 'w') as db:
             json.dump(turtledatabase,db, indent=4)
         return
+
+    def information():
+        with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db:
+            database = json.load(db)
+        
+        turtle = Turtle.luaJsonToObject(message.content, True)
+        database[turtle.label] = turtle.__dict__
+
+        with open(os.path.join(FILE_DIR, 'turtle.json'), 'w') as db:
+            json.dump(database,db, indent=4)
+        
+        return {turtle.label:turtle.__dict__}
