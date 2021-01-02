@@ -239,24 +239,39 @@ function turtleCommands(command, ...)
         Y = tonumber(arg[2])
         Z = tonumber(arg[3])
         A = tonumber(arg[4])
-        return information()
+        
+        ws.send(textutils.serialiseJSON(map()))
+        ws.send(textutils.serialiseJSON(information()))
+        return
     
     elseif command == "map" then
         return map()
     elseif command == "update" then
         ws.close()
         shell.run("update")
+    elseif command == "refuel" then
+        for slotnumber = 1, 16 do --reads inventory
+            local currentSlotDetail = turtle.getItemDetail(slotnumber)
+            if currentSlotDetail ~= nil then
+                for _, block in pairs({"minecraft:coal", "minecraft:coal_block"}) do
+                    if currentSlotDetail["name"] == block then
+                        turtle.select(slotnumber)
+                        turtle.refuel()
+                    end
+                end
+            end 
+        end
+        turtle.select(1)
     end
 end
 
 function initialInformation()
-    local inventory = {}
-    for slotnumber = 1, 16 do --reads inventory
-        local currentSlotDetail = turtle.getItemDetail(slotnumber)
-        if currentSlotDetail == nil then
-            currentSlotDetail = "None"
-        end
-        table.insert(inventory, currentSlotDetail)
+    
+    label = ""
+    if os.getComputerLabel() == nil then
+        label = "Unnamed"
+    else
+        label = os.getComputerLabel()
     end
 
     local turtleinfo = {
@@ -264,18 +279,26 @@ function initialInformation()
         ["recipient"] = "Server",
         ["message"] = {
             ["message_type"] = "turtle_connect",
-            ["content"] = {
-                ["id"] = os.getComputerID(),
-                ["label"] = label,
-                ["fuel"] = turtle.getFuelLevel(),
-                ["maxFuel"] = turtle.getFuelLimit(),
-                ["selectedSlot"] = turtle.getSelectedSlot(),
-                ["inventory"] = textutils.serialiseJSON(inventory),
-                ["location"] = {X,Y,Z,A}
-            }
+            ["content"] = "None"
         }
     }
-    return turtleinfo
+
+    ws.send(textutils.serialiseJSON(turtleinfo))
+    while true do
+        local message = ws.receive()
+        if message == nil then --when no websocket received
+            break
+        else
+            message = decode(message)
+            input = split(message["message"]["content"])
+            command = input[1]
+            table.remove(input, 1)
+            turtleCommands(command, input)
+            print("Command:"..command.." executed successfully")
+            break
+        end
+    end
+    return
 end
 
 function queryDatabase(querycontent)
@@ -289,6 +312,7 @@ function queryDatabase(querycontent)
     }
     return query
 end
+
 function websocketLoop()
 
     print("Connecting to websocket")
@@ -299,9 +323,9 @@ function websocketLoop()
         return
     end
     print("Connected")
-    ws.send(textutils.serialiseJSON(initialInformation()))
-    os.sleep(2)
-    ws.send(textutils.serialiseJSON(queryDatabase("location")))
+    initialInformation()
+    ws.send(textutils.serialiseJSON(information()))
+    
     while true do
         local message = ws.receive()
         term.clear()
@@ -325,16 +349,6 @@ function websocketLoop()
                     if output ~= nil then
                         ws.send(textutils.serialiseJSON(output))
                         print("Command:"..command.." executed successfully")
-                    end
-
-                elseif message["message"]["message_type"] == "query_response" then
-                    local response = message["message"]["content"]
-                    if response["query"] == "location" then --updates location variables
-                        X = split(response["response"])[1]
-                        Y = split(response["response"])[2]
-                        Z = split(response["response"])[3]
-                        A = split(response["response"])[4]
-                        print(X,Y,Z,A)
                     end
                 end
             end
@@ -370,7 +384,8 @@ while true do
     local status, res = pcall(websocketLoop)
 	if res == 'Terminated' then
 		print("Error. Rebooting")
-		os.sleep(1)
+        os.sleep(1)
+        ws.close()
 		break
     end
     print(res)

@@ -1,10 +1,9 @@
 const ws = new WebSocket('ws://localhost:1000');
-const turtledb = 'http://localhost:1001/server/turtle.json';
+const turtledb = `http://localhost:1001/server/turtle.json?nocache=${new Date().getTime()}`;
 const worlddb = 'http://localhost:1001/server/world.json';
 const dropdownselection = document.getElementById('turtle-dropdown')
 let dropdown = $('#turtle-dropdown');
 var selectedturtle = "Turtle"
-var blocklist = {}
 
 class message {
     constructor(recipient, message_type, content){
@@ -25,20 +24,100 @@ class message {
     }
 }
 
-// ThreeJS Scene
-var scene = new THREE.Scene();
+function colourFromString(string){
+    var hash = 0
+    for (var i = 0; i < string.length; i++) {
+        hash = string.charCodeAt(i) + ((hash << 5) - hash);
+        hash = hash & hash;
+    }
+    var color = '#';
+    for (var i = 0; i < 3; i++) {
+        var value = (hash >> (i * 8)) & 255;
+        color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;   
+}
 
-var camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight, 1,10000);
-camera.position.set( 0, -10, 5);
-camera.up = new THREE.Vector3(0,0,1);
-camera.lookAt(new THREE.Vector3(0,0,0));
+//Websocket Listeners
+ws.addEventListener('open', (event) => {
+    console.log("Connected to Server");
+    let connection = new message("Server", "client_connect", null)
+    ws.send(connection.generate())
+    
+});
 
+ws.addEventListener('close', (event) => {
+    console.log("Disconnected from Server");
+});
 
-var renderer = new THREE.WebGLRenderer({alpha: true});
-renderer.setClearColor( 0xffffff, 0);
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+ws.onmessage = function (message) {
+    message = JSON.parse(message.data);
+    console.log("[" + message.sender + "]: " + message.message.message_type);
+    
+    if (message.message.message_type == "map"){
+        updateBlockList(message.message.content);
+    } else if (message.message.message_type == "turtle_connect"){
+        console.log(message);
+        updateTurtleList(message.message.content, true)
 
+    } else if (message.message.message_type == "turtle_disconnect"){
+        console.log(message);
+        updateTurtleList(message.message.content, false)
+
+    } else if (message.message.message_type == "information"){
+        turtlelist[Object.keys(message.message.content)[0]] = message.message.content[Object.keys(message.message.content)[0]] //updates turtlelist from info
+        console.log(turtlelist)
+
+        object = scene.getObjectByName(selectedturtle)
+        console.log(object.position)
+
+        x = turtlelist[selectedturtle].location[0]
+        z = turtlelist[selectedturtle].location[1]
+        y = turtlelist[selectedturtle].location[2]
+        rot = parseInt(turtlelist[selectedturtle].location[3])
+
+        object.position.x = -x
+        object.position.y = y
+        object.position.z = z
+        
+        if (rot == 360){
+            rot = 0
+        }
+        
+        if(rot == 90){
+            object.rotation.set(Math.PI/2, -Math.PI/2, 0)
+        }
+        if(rot == 180){
+            object.rotation.set((3*Math.PI/2), 0, Math.PI)
+        }
+        if(rot == 0){
+            object.rotation.set(Math.PI/2, 0, 0)
+        }
+        if(rot == 270){
+            object.rotation.set(Math.PI/2, Math.PI/2, 0)
+        }
+
+        render();
+        
+    }
+};
+
+var blocklist = {}
+$.ajax({url:worlddb, async:false, success:function(data){ //adds blocks from worlddb
+    $.each(data, function (key, value) {
+        blocklist[key] = value
+    })
+}});
+console.log(blocklist);
+
+var turtlelist = {}
+$.ajax({url:turtledb, async:false, success:function(data){ //adds turtles from turtledb
+    $.each(data, function (key, value) {
+        if (value.connected == true){
+            turtlelist[key] = value
+        }
+    })
+}});
 var blockgroup = new THREE.Group()
 function cube(Colour, X, Z, Y, name){
     var geometry = new THREE.BoxGeometry(1, 1, 1);
@@ -53,7 +132,7 @@ function cube(Colour, X, Z, Y, name){
     wireframe.renderOrder = 1; // make sure wireframes are rendered 2nd
     
     cube.add(wireframe);
-    cube.position.x = X
+    cube.position.x = -X
     cube.position.y = Y
     cube.position.z = Z
     cube.name = name
@@ -64,14 +143,25 @@ function cube(Colour, X, Z, Y, name){
 }
 
 var turtlegroup = new THREE.Group()
-function turtle(x, z, y, rot){
+function turtle(x, z, y, rot, name){
     const loader = new THREE.GLTFLoader();
     loader.load( 'src/models/turtle.glb', function (turtle) {
     console.log(turtle)
     scene.add(turtle.scene)
     turtlegroup.add(turtle.scene)
-    turtle.scene.position.set(x,y,z)
-    turtle.scene.rotation.set((rot+90)*(Math.PI/180), 0, 0)
+    turtle.scene.position.set(-x,y,z)
+    
+    if(rot == 0){
+        turtle.scene.rotation.set(Math.PI/2, 0, 0)
+    } else if(rot == 90){ //to compensate for weird turtle rotation behaviour
+        turtle.scene.rotation.set(Math.PI/2, -Math.PI/2, 0)
+    }else if(rot == 180){
+        turtle.scene.rotation.set((3*Math.PI/2), 0, Math.PI)
+    }else if(rot == 270){
+        turtle.scene.rotation.set(Math.PI/2, Math.PI/2, 0)
+    }
+
+    turtle.scene.name = name
     return turtle.scene
     })
 }
@@ -107,12 +197,15 @@ function updateBlockList(messagecontent) {
     else if (`${x},${y},${z}` in blocklist) {
         delete blocklist[`${x},${y},${z}`]
     }
-    console.log(blocklist);
 
     for (var keys in blocklist){
         if (scene.getObjectByName(keys) == null){
             coords = keys.split`,`.map(x=>+x)
-            cube(0x43d21f, coords[0], coords[1], coords[2], keys)
+            
+            value = blocklist[keys]
+            colour = colourFromString(value.name)
+
+            cube(colour, coords[0], coords[1], coords[2], keys)
         }
         for (object in blockgroup.children){
             object = blockgroup.children[object]
@@ -124,22 +217,67 @@ function updateBlockList(messagecontent) {
     }
 }
 
+function updateTurtleList(turtleinfo, isconnecting) {
+    if (isconnecting == true){
+        turtlelist[turtleinfo.label] = turtleinfo
+    
+        Object.keys(turtlelist).forEach(function(key){
+            console.log(key)
+            if (scene.getObjectByName(key) == null){
+                [x,y,z,rot] = turtlelist[key].location
+                turtle(x, y, z, rot, turtlelist[key].label)
+            }
+        })
+
+    } else if (isconnecting ==false){
+        delete turtlelist[turtleinfo]
+
+        for (object in turtlegroup.children){
+            object = turtlegroup.children[object]
+            if (!(object.name in turtlelist)){
+                console.log("removing turtle")
+                scene.remove(object)
+                turtlegroup.remove(object)
+            }
+        };
+    }
+
+    //Dropdown
+    dropdown.empty();
+    dropdown.append('<option selected="true" disabled>Choose Turtle</option>');
+    dropdown.prop('selectedIndex', 0);
+    for (keys in turtlelist){
+        var value = turtlelist[keys]
+        dropdown.append($('<option></option>').attr('value', value.abbreviation).text(keys));
+    }
+}
+
+// ThreeJS Scene
+var scene = new THREE.Scene();
+
+var camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight, 1,10000);
+camera.position.set( 0, -10, 5);
+camera.up = new THREE.Vector3(0,0,1);
+camera.lookAt(new THREE.Vector3(0,0,0));
+
+
+var renderer = new THREE.WebGLRenderer({alpha: true});
+renderer.setClearColor( 0xffffff, 0);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
 const light = new THREE.PointLight( 0xffffff, 5);
 light.position.set( 50, 50, 50 );
 scene.add( light );
 
-$.ajax({url:worlddb, async:false, success:function(data){
-    $.each(data, function (key, value) {
-        blocklist[key] = value
-    })
-}});
-console.log(blocklist);
-
 for (var keys in blocklist){
     if (scene.getObjectByName(keys) == null){
-        console.log("adding block")
         coords = keys.split`,`.map(x=>+x)
-        cube(0x43d21f, coords[0], coords[1], coords[2], keys)
+        
+        value = blocklist[keys]
+        colour = colourFromString(value.name)
+
+        cube(colour, coords[0], coords[1], coords[2], keys)
     }
     blockgroup.traverse(function(object){
         console.log(object.name)
@@ -149,39 +287,27 @@ for (var keys in blocklist){
     });
 }
 
+Object.keys(turtlelist).forEach(function(key){
+    console.log(key)
+    console.log(turtlelist[key])
+    if (scene.getObjectByName(key) == null){
+        [x,y,z,rot] = turtlelist[key].location
+        turtle(x, y, z, rot, turtlelist[key].label)
+    }
+})
+
 scene.add(turtlegroup)
 scene.add(blockgroup)
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.update();
 
 function render() {
+    renderer.render(scene, camera)
     requestAnimationFrame(render);
-    controls.update();
-    renderer.render(scene, camera);
+    controls.update();;
 }
 
 render();
-
-//Websocket Listeners
-ws.addEventListener('open', (event) => {
-    console.log("Connected to Server");
-    let connection = new message("Server", "client_connect", null)
-    ws.send(connection.generate())
-});
-
-ws.addEventListener('close', (event) => {
-    console.log("Disconnected from Server");
-});
-
-ws.onmessage = function (message) {
-    message = JSON.parse(message.data);
-    console.log("[" + message["sender"] + "]: " + message["message"]["message_type"]);
-    
-    if (message["message"]["message_type"] == "map"){
-        console.log(message)
-        updateBlockList(message["message"]["content"])
-    }
-};
 
 //ButtonPressFunctions
 function rotateCW(){
@@ -215,10 +341,27 @@ function definedCommand(){
     ws.send(turtlemessage.generate())
 }
 
-function moveForward(){
-    let turtlemessage = new message(selectedturtle, "turtle_custom_command", "return turtle.turnLeft()");
-    ws.send(turtlemessage.generate())
-}
+document.addEventListener("keydown", event => {
+    if (event.isComposing || event.keyCode === 87) {
+        let turtlemessage = new message(selectedturtle, "turtle_custom_command", "return turtle.forward()");
+        ws.send(turtlemessage.generate())
+    }
+
+    if (event.isComposing || event.keyCode === 17) {
+        let turtlemessage = new message(selectedturtle, "turtle_command", "map");
+        ws.send(turtlemessage.generate())
+    }
+
+    if (event.isComposing || event.keyCode === 81) {
+        let turtlemessage = new message(selectedturtle, "turtle_custom_command", "return turtle.turnRight()");
+        ws.send(turtlemessage.generate())
+    }
+
+    if (event.isComposing || event.keyCode === 69) {
+        let turtlemessage = new message(selectedturtle, "turtle_custom_command", "return turtle.turnLeft()");
+        ws.send(turtlemessage.generate())
+    }
+});
 
 //Dropdown
 dropdown.empty();
@@ -226,10 +369,13 @@ dropdown.append('<option selected="true" disabled>Choose Turtle</option>');
 dropdown.prop('selectedIndex', 0);
 $.getJSON(turtledb, function(data) {
     $.each(data, function (key, entry) {
-        dropdown.append($('<option></option>').attr('value', entry.abbreviation).text(key));
+        if(entry.connected){
+            dropdown.append($('<option></option>').attr('value', entry.abbreviation).text(key));
+        }
     })
 });
 //Dropdown change recipient
 dropdownselection.addEventListener('change', (event) => {
     selectedturtle = document.getElementById("turtle-dropdown").value
+    object = scene.getObjectByName(selectedturtle)
 });
