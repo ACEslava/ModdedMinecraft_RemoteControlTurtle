@@ -56,6 +56,8 @@ ws.onmessage = function (message) {
     
     if (message.message.message_type == "map"){
         updateBlockList(message.message.content);
+        reloadcounter ++
+
     } else if (message.message.message_type == "turtle_connect"){
         console.log(message);
         updateTurtleList(message.message.content, true)
@@ -71,6 +73,7 @@ ws.onmessage = function (message) {
         object = scene.getObjectByName(selectedturtle)
         console.log(object.position)
 
+        
         x = turtlelist[selectedturtle].location[0]
         z = turtlelist[selectedturtle].location[1]
         y = turtlelist[selectedturtle].location[2]
@@ -82,6 +85,10 @@ ws.onmessage = function (message) {
         
         if (rot == 360){
             rot = 0
+        }
+
+        if (rot == -90){
+            rot = 270
         }
         
         if(rot == 90){
@@ -97,8 +104,13 @@ ws.onmessage = function (message) {
             object.rotation.set(Math.PI/2, Math.PI/2, 0)
         }
 
-        render();
+        controls.target.copy(object.position)
+        controls.update()
         
+    } else if (message.message.message_type == "error"){
+        var node = document.createElement("div");
+        node.appendChild(document.createTextNode(JSON.stringify(message.content)));
+        document.getElementById("turtle_log").appendChild(node)
     }
 };
 
@@ -108,7 +120,6 @@ $.ajax({url:worlddb, async:false, success:function(data){ //adds blocks from wor
         blocklist[key] = value
     })
 }});
-console.log(blocklist);
 
 var turtlelist = {}
 $.ajax({url:turtledb, async:false, success:function(data){ //adds turtles from turtledb
@@ -280,79 +291,77 @@ document.addEventListener("keydown", event => {
         ws.send(turtlemessage.generate())
     }
 
-    if (event.isComposing || event.keyCode === 17) {
-        let turtlemessage = new message(selectedturtle, "turtle_command", "map");
+    if (event.isComposing || event.keyCode === 83) {
+        let turtlemessage = new message(selectedturtle, "turtle_command", "move backward");
         ws.send(turtlemessage.generate())
     }
 
-    // if (event.isComposing || event.keyCode === 81) {
-    //     let turtlemessage = new message(selectedturtle, "turtle_command", "return turtle.turnRight()");
-    //     ws.send(turtlemessage.generate())
-    // }
+    if (event.isComposing || event.keyCode === 81) {
+        let turtlemessage = new message(selectedturtle, "turtle_command", "rotate CCW");
+        ws.send(turtlemessage.generate())
+    }
 
-    // if (event.isComposing || event.keyCode === 69) {
-    //     let turtlemessage = new message(selectedturtle, "turtle_custom_command", "return turtle.turnLeft()");
-    //     ws.send(turtlemessage.generate())
-    // }
+    if (event.isComposing || event.keyCode === 69) {
+        let turtlemessage = new message(selectedturtle, "turtle_command", "rotate CW");
+        ws.send(turtlemessage.generate())
+    }
 });
 
 // ThreeJS Scene
-function initThreeJS() {
-    var scene = new THREE.Scene();
+var scene = new THREE.Scene();
 
-    var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
-    camera.position.set(0, -10, 5);
-    camera.up = new THREE.Vector3(0, 0, 1);
-    camera.lookAt(new THREE.Vector3(0, 0, 0));
+var camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight, 1,10000);
+camera.position.set( 0, -10, 5);
+camera.up = new THREE.Vector3(0,0,1);
+camera.lookAt(new THREE.Vector3(0,0,0));
 
 
-    var renderer = new THREE.WebGLRenderer({ alpha: true });
-    renderer.setClearColor(0xffffff, 0);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+var renderer = new THREE.WebGLRenderer({alpha: true});
+renderer.setClearColor( 0xffffff, 0);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-    const light = new THREE.PointLight(0xffffff, 5);
-    light.position.set(50, 50, 50);
-    scene.add(light);
+const light = new THREE.PointLight( 0xffffff, 5);
+light.position.set( 50, 50, 50 );
+scene.add(light);
 
-    for (var keys in blocklist) {
-        if (scene.getObjectByName(keys) == null) {
-            coords = keys.split`,`.map(x => +x);
+for (var keys in blocklist){
+    if (scene.getObjectByName(keys) == null){
+        coords = keys.split`,`.map(x=>+x)
+        
+        value = blocklist[keys]
+        colour = colourFromString(value.name)
 
-            value = blocklist[keys];
-            colour = colourFromString(value.name);
-
-            cube(colour, coords[0], coords[1], coords[2], keys);
-        }
-        blockgroup.traverse(function (object) {
-            console.log(object.name);
-            if (!(object.name in blocklist)) {
-                scene.remove(object);
-            }
-        });
+        cube(colour, coords[0], coords[1], coords[2], keys)
     }
-
-    Object.keys(turtlelist).forEach(function (key) {
-        console.log(key);
-        console.log(turtlelist[key]);
-        if (scene.getObjectByName(key) == null) {
-            [x, y, z, rot] = turtlelist[key].location;
-            turtle(x, y, z, rot, turtlelist[key].label);
+    blockgroup.traverse(function(object){
+        if (!(object.name in blocklist)){
+            scene.remove(object)
         }
     });
-
-    scene.add(turtlegroup);
-    scene.add(blockgroup);
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.update();
-    return { scene, keys, renderer, camera, controls };
 }
+
+Object.keys(turtlelist).forEach(function(key){
+    console.log(key)
+    console.log(turtlelist[key])
+    if (scene.getObjectByName(key) == null){
+        [x,y,z,rot] = turtlelist[key].location
+        turtle(x, y, z, rot, turtlelist[key].label)
+    }
+})
+
+scene.add(turtlegroup)
+scene.add(blockgroup)
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.update();
 
 function render() {
     renderer.render(scene, camera)
     requestAnimationFrame(render);
     controls.update();;
 }
+
+render();
 
 //Dropdown
 dropdown.empty();
@@ -365,12 +374,13 @@ $.getJSON(turtledb, function(data) {
         }
     })
 });
-
 //Dropdown change recipient
 dropdownselection.addEventListener('change', (event) => {
     selectedturtle = document.getElementById("turtle-dropdown").value
     object = scene.getObjectByName(selectedturtle)
+    controls.target.copy(object.position)
+    camera.position.copy(object.position)
+    camera.position.z = object.position.z + 4
+    camera.position.y = object.position.y + 4
+    controls.update()
 });
-
-initThreeJS();
-render();

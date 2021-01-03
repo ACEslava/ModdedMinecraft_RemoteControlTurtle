@@ -64,49 +64,33 @@ async def connect(websocket, path):
             if message.sender == "Client": #checks if sender is client
                 if message.message_type == "client_connect":
                     print(f'[Client] Connected')
-                
-                if message.content == "return turtle.turnRight()":
-                    Turtle.turnRight(message)
-                    with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db:
-                        database = json.load(db)
-                    turtle = Turtle.jsonToObject(database[message.recipient], True)
-                    
-                    infomessage = message_data("Server", "Client", "information", {turtle.label:turtle.__dict__}) #sends client the information
-                    await asyncio.create_task(broadcast(infomessage.encodeJSON()))
-
-                if message.content == "return turtle.turnLeft()":
-                    Turtle.turnLeft(message)
-                    with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db:
-                        database = json.load(db)
-                    turtle = Turtle.jsonToObject(database[message.recipient], True)
-                    
-                    infomessage = message_data("Server", "Client", "information", {turtle.label:turtle.__dict__}) #sends client the information
-                    await asyncio.create_task(broadcast(infomessage.encodeJSON()))
-
-                if message.content == "return turtle.forward()":
-                    Turtle.moveForward(message)
-                    with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db:
-                        database = json.load(db)
-                    turtle = Turtle.jsonToObject(database[message.recipient], True)
-                    
-                    infomessage = message_data("Server", "Client", "information", {turtle.label:turtle.__dict__}) #sends client the information
-                    await asyncio.create_task(broadcast(infomessage.encodeJSON()))
                     
             else: #thus sender is turtle if not client or server
                 TURTLES[message.sender] = websocket #adds turtle to current working list of connected turtles
+                
                 if message.message_type == "turtle_connect":
                     print(f'[{message.sender}] Connected')
                     with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db:
                         database = json.load(db)
 
                     if message.sender == "Unnamed":
-                        result = message_data("Server", message.sender, "turtle_command", f"location 0 0 0 0")
+                        with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db: #opens turtle database
+                            database = json.load(db)
+
+                        while True: #checks if name matches any existing turtles
+                            name = next(iter(funkybob.RandomNameGenerator(members=2, separator='_')))
+                            if name in database.keys():
+                                continue
+                            else: break
+                        
+                        renamecommand = message_data("Server", "Unnamed", "turtle_command", f"rename {name}") #sends rename command
+                        print(renamecommand.encodeJSON())
+                        await websocket.send(renamecommand.encodeJSON())
+                        database[name] = {"location":[0,0,0,0]}
+                        with open(os.path.join(FILE_DIR, 'turtle.json'), 'w') as db: #opens turtle database
+                            json.dump(database, db, indent=4)
                     
                     else: 
-                        locationdata = ' '.join([str(i) for i in database[message.sender]["location"]]).strip() #converts table to space-sep. string
-                        result = message_data("Server", message.sender, "turtle_command", f"location {locationdata}") #sends turtle location data
-                        await websocket.send(result.encodeJSON())
-                        
                         connectedmessage = message_data("Server", "Client", "turtle_connect", database[message.sender])
                         await asyncio.create_task(broadcast(connectedmessage.encodeJSON())) #tells client that bot connected
                         
@@ -140,7 +124,7 @@ async def connect(websocket, path):
                         await asyncio.create_task(broadcast(connectedmessage.encodeJSON())) #tells client that bot connected
 
                     else:
-                        infomessage = message_data("Server", "Client", "information", Turtle.information()) #sends client the information
+                        infomessage = message_data("Server", "Client", "information", Turtle.information(message)) #sends client the information
                         await asyncio.create_task(broadcast(infomessage.encodeJSON()))
                 
                 elif message.message_type == "map":
@@ -161,7 +145,11 @@ async def connect(websocket, path):
                 
                 elif message.message_type == "error":
                     print(message.content)
+                    infomessage = message_data("Server", "Client", "error", {message.sender:message.content}) #sends client the information
+                    await asyncio.create_task(broadcast(infomessage.encodeJSON()))
 
+                elif message.message_type == "custom_command_response":
+                    print(message.content)
     except Exception as e:
         print(e)
         pass

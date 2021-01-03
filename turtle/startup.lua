@@ -1,9 +1,12 @@
-X = 0
+--Globals
+X = 0 --Localsave of coords
 Y = 0
 Z = 0
 A = 0
 isFuelLow = false
 stopAutomation = false
+NGROK = "1ed92008d042.ngrok.io"
+LABEL = ""
 
 ----BEGIN JSON LIBRARY
 --utils
@@ -148,8 +151,6 @@ function decodeFromFile(path)
 	return decoded
 end
 
-----END JSON LIBRARY
-
 function split(inputstr, sep)
     if sep == nil then
             sep = "%s"
@@ -160,6 +161,8 @@ function split(inputstr, sep)
     end
     return t
 end
+
+----END JSON LIBRARY
 
 function information()
     local inventory = {}
@@ -172,13 +175,13 @@ function information()
         end
 
         local turtleinfo = {
-            ["sender"] = label,
+            ["sender"] = LABEL,
             ["recipient"] = "Server",
             ["message"] = {
                 ["message_type"] = "information",
                 ["content"] = {
                     ["id"] = os.getComputerID(),
-                    ["label"] = label,
+                    ["label"] = LABEL,
                     ["fuel"] = turtle.getFuelLevel(),
                     ["maxFuel"] = turtle.getFuelLimit(),
                     ["selectedSlot"] = turtle.getSelectedSlot(),
@@ -191,11 +194,11 @@ function information()
 end
 
 function map()
-    local label = ""
+    local LABEL = ""
         if os.getComputerLabel() == nil then
-            label = "Unnamed"
+            LABEL = "Unnamed"
         else
-            label = os.getComputerLabel()
+            LABEL = os.getComputerLabel()
         end
 
     local isblockfront, blockfrontinfo = turtle.inspect()
@@ -212,7 +215,7 @@ function map()
     end
 
     local turtleinfo = {
-        ["sender"] = label,
+        ["sender"] = LABEL,
         ["recipient"] = "Server",
         ["message"] = {
             ["message_type"] = "map",
@@ -229,15 +232,15 @@ end
 
 function initialInformation()
     
-    label = ""
+    LABEL = ""
     if os.getComputerLabel() == nil then
-        label = "Unnamed"
+        LABEL = "Unnamed"
     else
-        label = os.getComputerLabel()
+        LABEL = os.getComputerLabel()
     end
 
     local turtleinfo = {
-        ["sender"] = label,
+        ["sender"] = LABEL,
         ["recipient"] = "Server",
         ["message"] = {
             ["message_type"] = "turtle_connect",
@@ -246,18 +249,18 @@ function initialInformation()
     }
 
     ws.send(textutils.serialiseJSON(turtleinfo))
-    while true do
+    if LABEL ~= "Unnamed" then
+        ws.send(textutils.serialiseJSON(queryDatabase("location")))
         local message = ws.receive()
-        if message == nil then --when no websocket received
-            break
-        else
-            message = decode(message)
-            input = split(message["message"]["content"])
-            command = input[1]
-            table.remove(input, 1)
-            turtleCommands(command, input)
-            print("Command:"..command.." executed successfully")
-            break
+        message = decode(message)
+        if message["recipient"] == LABEL then --blocks messages not for turtle
+            print(message["message"]["content"])
+            if message["message"]["message_type"] == "turtle_command" then
+                input = split(message["message"]["content"])
+                command = input[1]
+                table.remove(input, 1)
+                turtleCommands(command, input)
+            end
         end
     end
     return
@@ -265,7 +268,7 @@ end
 
 function queryDatabase(querycontent)
     local query = {
-        ["sender"] = label,
+        ["sender"] = LABEL,
         ["recipient"] = "Server",
         ["message"] = {
             ["message_type"] = "query",
@@ -275,11 +278,82 @@ function queryDatabase(querycontent)
     return query
 end
 
+function move(direction)
+    if direction == "forward" then
+        canmove = turtle.forward()
+        if canmove == true then
+            if A == 0 then
+                Z = Z - 1
+            elseif A == 90 then
+                X = X + 1
+            elseif A == 180 then
+                Z = Z + 1
+            elseif A == 270 then
+                X = X - 1
+            end
+            ws.send(textutils.serialiseJSON(information()))
+            ws.send(textutils.serialiseJSON(map()))
+            os.sleep(0.2)
+            ws.send(textutils.serialiseJSON(queryDatabase("location")))
+        end
+
+    elseif direction == "backward" then
+        canmove = turtle.back()
+        if canmove == true then
+            if A == 0 then
+                Z = Z + 1
+            elseif A == 90 then
+                X = X - 1
+            elseif A == 180 then
+                Z = Z - 1
+            elseif A == 270 then
+                X = X + 1
+            end
+            ws.send(textutils.serialiseJSON(information()))
+            ws.send(textutils.serialiseJSON(map()))
+            os.sleep(0.2)
+            ws.send(textutils.serialiseJSON(queryDatabase("location")))
+        end
+    end
+end
+
+function rotate(direction)
+    if direction == "CW" then
+        canmove = turtle.turnRight()
+        if canmove == true then
+                A = A + 90
+                if A == 360 then
+                    A = 0
+                end
+            ws.send(textutils.serialiseJSON(information()))
+            ws.send(textutils.serialiseJSON(map()))
+            os.sleep(0.2)
+            ws.send(textutils.serialiseJSON(queryDatabase("location")))
+        end
+
+    elseif direction == "CCW" then
+        canmove = turtle.turnLeft()
+        A = A - 90
+        if A == -90 then
+            A = 270
+        end
+        if canmove == true then
+            ws.send(textutils.serialiseJSON(information()))
+            ws.send(textutils.serialiseJSON(map()))
+            os.sleep(0.2)
+            ws.send(textutils.serialiseJSON(queryDatabase("location")))
+        end
+    end
+end
+
 function turtleCommands(command, ...)
     arg = arg[1]
     if command == "rename" then
         os.setComputerLabel(arg[1])
+        LABEL = arg[1]
         print("Rename successful")
+        ws.send(textutils.serialiseJSON(information()))
+        os.reboot()
         return
 
     elseif command == "information" then
@@ -314,43 +388,16 @@ function turtleCommands(command, ...)
         end
         turtle.select(1)
     elseif command == "move" then
-        if arg[1] == "forward" then
-            if A == 0 then
-                Y = Y - 1
-            elseif A == 90 then
-                X = X + 1
-            elseif A == 180 then
-                Y = Y + 1
-            elseif A == 270 then
-                X = X - 1
-            end
-
-            turtle.forward()
-            ws.send(textutils.serialiseJSON(information()))
-            ws.send(textutils.serialiseJSON(map()))
-            ws.send(textutils.serialiseJSON(queryDatabase("location")))
-
-        elseif arg[1] == "backward" then
-            if A == 0 then
-                Y = Y + 1
-            elseif A == 90 then
-                X = X - 1
-            elseif A == 180 then
-                Y = Y - 1
-            elseif A == 270 then
-                X = X + 1
-            end
-            turtle.backward()
-            ws.send(textutils.serialiseJSON(information()))
-            ws.send(textutils.serialiseJSON(map()))
-        end    
+        move(arg[1])
+    elseif command == "rotate" then
+        rotate(arg[1])
     end
 end
 
 function websocketLoop()
 
     print("Connecting to websocket")
-    ws, err = http.websocket("ws://0a1207852c16.ngrok.io")
+    ws, err = http.websocket("ws://"..NGROK)
     
     if err then
         print(err)
@@ -358,7 +405,6 @@ function websocketLoop()
     end
     print("Connected")
     initialInformation()
-    ws.send(textutils.serialiseJSON(information()))
     
     while true do
         local message = ws.receive()
@@ -368,23 +414,37 @@ function websocketLoop()
             break
         else
             message = decode(message)
-            if message["recipient"] == label then --blocks messages not for turtle
-                if isFuelLow == true then --checks if fuel low, sends to server
+            if message["recipient"] == LABEL then --blocks messages not for turtle
+                if turtle.getFuelLevel() < 100 then --checks if fuel low, sends to server
+                    isFuelLow = true
+                    
                     local message = {
-                        ["sender"] = label,
+                        ["sender"] = LABEL,
                         ["recipient"] = "Server",
                         ["message"] = {
                             ["message_type"] = "error",
-                            ["content"] = "Fuel Low"
+                            ["content"] = "Fuel Low:" .. turtle.getFuelLevel()
                         }
                     }
                     ws.send(textutils.serialiseJSON(message))
+                else
+                    isFuelLow = false
                 end
-
+            
                 print(message["message"]["content"])
                 if message["message"]["message_type"] == "turtle_custom_command" then
                     local func = loadstring(message["message"]["content"])
-                    func()
+                    output = func()
+                    local response = {
+                        ["sender"] = LABEL,
+                        ["recipient"] = "Server",
+                        ["message"] = {
+                            ["message_type"] = "custom_command_response",
+                            ["content"] = output
+                        }
+                    }
+
+                    ws.send(textutils.serialiseJSON(response))
                     ws.send(textutils.serialiseJSON(queryDatabase("location")))
 
                 elseif message["message"]["message_type"] == "turtle_command" then
@@ -412,21 +472,20 @@ if shell.resolveProgram("update") == nil then
 end
 print("Dependencies resolved")
 
-label = ""
-    if os.getComputerLabel() == nil then
-        label = "Unnamed"
-    else
-        label = os.getComputerLabel()
-    end
+if os.getComputerLabel() == nil then
+    LABEL = "Unnamed"
+else
+    LABEL = os.getComputerLabel()
+end
 
 while true do 
     term.clear()
     term.setCursorPos(1,1)
     local status, res = pcall(websocketLoop)
 	if res == 'Terminated' then
-		print("Error. Rebooting")
+		print("Error. If you are reading this, please type update")
         os.sleep(1)
-        ws.close()
+        os.reboot()
 		break
     end
     print(res)

@@ -85,60 +85,7 @@ class Turtle():
             json.dump(database, db, indent=4)
         return
 
-    def turnRight(message):
-        with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db: #opens turtle database
-            database = json.load(db)
-
-        turtle = Turtle.jsonToObject(database[message.recipient], True)
-        turtle.location[3] += 90 #North = 0, CW + 90, CCW - 90
-        if turtle.location[3] == 360: 
-            turtle.location[3] = 0
-        database[turtle.label] = turtle.__dict__
-
-        with open(os.path.join(FILE_DIR, 'turtle.json'), 'w') as db:
-            json.dump(database,db, indent=4)
-        return
-
-    def turnLeft(message):
-        with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db: #opens turtle database
-            database = json.load(db)
-
-        turtle = Turtle.jsonToObject(database[message.recipient], True)
-        turtle.location[3] -= 90 #North = 0, CW + 90, CCW - 90
-        if turtle.location[3] == -90: 
-            turtle.location[3] = 270
-        database[turtle.label] = turtle.__dict__
-
-        with open(os.path.join(FILE_DIR, 'turtle.json'), 'w') as db:
-            json.dump(database,db, indent=4)
-        return
-
-    def moveForward(message):
-        with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db: #opens turtle database
-            turtledatabase = json.load(db)
-        with open(os.path.join(FILE_DIR, 'world.json'), 'r') as db: #opens turtle database
-            worlddatabase = json.load(db)
-        
-        turtle = Turtle.jsonToObject(turtledatabase[message.recipient], True)
-        if turtle.location[3] == 0: #changes database dep on rot
-            turtle.location[2] -=1
-        elif turtle.location[3] == 90:
-            turtle.location[0] +=1
-        elif turtle.location[3] == 180:
-            turtle.location[2] +=1
-        elif turtle.location[3] == 270:
-            turtle.location[0] -=1
-        
-        key = ",".join([str(i) for i in turtle.location[0:3]]).strip() #checks if key exist (meaning turtle collide)
-        if key in worlddatabase:
-            return "error"
-
-        turtledatabase[turtle.label] = turtle.__dict__
-        with open(os.path.join(FILE_DIR, 'turtle.json'), 'w') as db:
-            json.dump(turtledatabase,db, indent=4)
-        return
-
-    def information():
+    def information(message):
         with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db:
             database = json.load(db)
         

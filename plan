@@ -1,25 +1,45 @@
-JSON Packets:
-    turtle_connect: null
-    client_connect: null
-    message: any 
+JSON Packet Types
+    server
+        information
+        query_response (unused)
 
-    turtle_command
-        movement: direction [str]
-        rotation: direction [str]
-        pickup_blocks: direction [str]
+    client
+        turtle_command
+            move [args]
+            location [args]
+            rotate [args]
+            update
+            refuel
+            map
+            information
+    
+        turtle_custom_command
+        client_connect
 
-    turtle_command_args
-        sign-based chat: sign contents [str]
-        name_change: name [str]
-        drop_blocks: block to drop [str], quantity [int]
-        craft: item to craft [str], quantity [int]
-        custom_command: any
+    turtle
+        turtle_connect
+        map (reply for turtle_command map)
+        information (reply for turtle_command information)
+        error
+        query
+        custom_command_response
 
-    turtle_data
-        map_data: null
-        location_data: null
-        system_data
-            name: name [str]
-            inventory: inventory contents [str]
-            currentselectedslot: slot number [int]
-            fuel_level: fuel number [int]
+TODO
+    better gui
+        mouseover gui
+        interactable scene (selecting)
+        inventory gui
+        fuel levels
+    
+    turtle functions
+        place block
+        break block
+        drop items
+        crafting
+✅        refuel
+        usercontrollable inventory selection (tie in w/ inventory gui)
+        interface w/ other turtles
+        automatic functions
+            mining
+            automapping
+            reproduce
