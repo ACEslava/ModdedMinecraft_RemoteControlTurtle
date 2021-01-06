@@ -1,4 +1,3 @@
-const ws = new WebSocket('ws://localhost:1000');
 const turtledb = `http://localhost:1001/server/turtle.json?nocache=${new Date().getTime()}`;
 const worlddb = 'http://localhost:1001/server/world.json';
 const dropdownselection = document.getElementById('turtle-dropdown')
@@ -38,82 +37,6 @@ function colourFromString(string){
     return color;   
 }
 
-//Websocket Listeners
-ws.addEventListener('open', (event) => {
-    console.log("Connected to Server");
-    let connection = new message("Server", "client_connect", null)
-    ws.send(connection.generate())
-    
-});
-
-ws.addEventListener('close', (event) => {
-    console.log("Disconnected from Server");
-});
-
-ws.onmessage = function (message) {
-    message = JSON.parse(message.data);
-    console.log("[" + message.sender + "]: " + message.message.message_type);
-    
-    if (message.message.message_type == "map"){
-        updateBlockList(message.message.content);
-        reloadcounter ++
-
-    } else if (message.message.message_type == "turtle_connect"){
-        console.log(message);
-        updateTurtleList(message.message.content, true)
-
-    } else if (message.message.message_type == "turtle_disconnect"){
-        console.log(message);
-        updateTurtleList(message.message.content, false)
-
-    } else if (message.message.message_type == "information"){
-        turtlelist[Object.keys(message.message.content)[0]] = message.message.content[Object.keys(message.message.content)[0]] //updates turtlelist from info
-        console.log(turtlelist)
-
-        object = scene.getObjectByName(selectedturtle)
-        console.log(object.position)
-
-        
-        x = turtlelist[selectedturtle].location[0]
-        z = turtlelist[selectedturtle].location[1]
-        y = turtlelist[selectedturtle].location[2]
-        rot = parseInt(turtlelist[selectedturtle].location[3])
-
-        object.position.x = -x
-        object.position.y = y
-        object.position.z = z
-        
-        if (rot == 360){
-            rot = 0
-        }
-
-        if (rot == -90){
-            rot = 270
-        }
-        
-        if(rot == 90){
-            object.rotation.set(Math.PI/2, -Math.PI/2, 0)
-        }
-        if(rot == 180){
-            object.rotation.set((3*Math.PI/2), 0, Math.PI)
-        }
-        if(rot == 0){
-            object.rotation.set(Math.PI/2, 0, 0)
-        }
-        if(rot == 270){
-            object.rotation.set(Math.PI/2, Math.PI/2, 0)
-        }
-
-        controls.target.copy(object.position)
-        controls.update()
-        
-    } else if (message.message.message_type == "error"){
-        var node = document.createElement("div");
-        node.appendChild(document.createTextNode(JSON.stringify(message.content)));
-        document.getElementById("turtle_log").appendChild(node)
-    }
-};
-
 var blocklist = {}
 $.ajax({url:worlddb, async:false, success:function(data){ //adds blocks from worlddb
     $.each(data, function (key, value) {
@@ -129,6 +52,7 @@ $.ajax({url:turtledb, async:false, success:function(data){ //adds turtles from t
         }
     })
 }});
+
 var blockgroup = new THREE.Group()
 function cube(Colour, X, Z, Y, name){
     var geometry = new THREE.BoxGeometry(1, 1, 1);
@@ -315,13 +239,13 @@ camera.position.set( 0, -10, 5);
 camera.up = new THREE.Vector3(0,0,1);
 camera.lookAt(new THREE.Vector3(0,0,0));
 
-
-var renderer = new THREE.WebGLRenderer({alpha: true});
+var ThreeJScanvas = document.getElementById("ThreeJSCanvas")
+var renderer = new THREE.WebGLRenderer({alpha: true, canvas: ThreeJScanvas });
 renderer.setClearColor( 0xffffff, 0);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const light = new THREE.PointLight( 0xffffff, 5);
+const light = new THREE.AmbientLight( 0xffffff, 2);
 light.position.set( 50, 50, 50 );
 scene.add(light);
 
