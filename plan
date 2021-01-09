@@ -27,19 +27,19 @@ JSON Packet Types
 TODO
     better gui
         mouseover gui
-        interactable scene (selecting)
-        inventory gui
+✅     interactable scene (selecting)
+🚧     inventory gui 
         fuel levels
     
     turtle functions
         place block
-        break block
+✅      break block
         drop items
         crafting
-✅        refuel
-        usercontrollable inventory selection (tie in w/ inventory gui)
+✅      refuel
+🚧      usercontrollable inventory selection (tie in w/ inventory gui)
         interface w/ other turtles
         automatic functions
-            mining
+🚧         mining
             automapping
             reproduce
