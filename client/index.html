@@ -1,56 +1,11 @@
-<!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="utf-8">
-		<title>Turtle Control Console</title>
-		<style>
-			body { margin: 0; }
-			canvas {
-				width: 100vw;
-				height: 100vh;
-				display: block;
-				position: fixed;
-				top: 0;
-				left: 0;
-				z-index: -9999;
-			}
-		</style>
-		
-		<script src="src/jQuery.min.js"></script>
-		<script src="src/three.min.js"></script>
-
-		<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
-		<script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/loaders/GLTFLoader.js"></script>
-
-	</head>
-	
-	<body>
-		<h1>Turtle Control</h1>
-		<p>
-		<select id="turtle-dropdown" name="turtle"></select>	
-		</p>
-		<div>
-			<button type="button" onclick="updateAll()">Update All</input>
-		</div>
-		<p>
-		<label>Custom Command:</label>
-		<input type="text" id="customcommand" name="customcommand"></input>
-		<button type="button" onclick="customCommand()">Execute</button>
-		</p>
-		<p>
-		<label>BuiltIn Command:</label>
-		<input type="text" id="definedcommand" name="definedcommand"></input>
-		<button type="button" onclick="definedCommand()">Execute</button>
-		</p>
-		<p id="turtle_log"></p>
-		<div class="React"></div>
-		<canvas id="ThreeJSCanvas"></canvas>
-		<script src="scene.js"></script>
-		<script src="./components/Websocket.js"></script>
-		<script type="text/babel" src="./components/App.js"></script>
-		
-		<script type="text/babel">
-			ReactDOM.render(<App/>, document.querySelector(".React"))
-		</script>
-	</body>
+  <head>
+    <title>Turtle Control</title>
+  </head>
+  <body>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" crossorigin src="..." />
+    <div id="root" style="margin:-8px"></div>
+    <div id="information"></div>
+    <div id="inventory"></div>
+  </body>
 </html>

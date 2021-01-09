@@ -5,7 +5,6 @@ import funkybob
 import os
 import subprocess
 import time
-import webbrowser
 import signal
 import sys
 import threading
@@ -173,25 +172,24 @@ async def connect(websocket, path):
                 json.dump(database, db, indent = 4)
 
 def main():
-    proc = subprocess.Popen(['python', '-u', '-m', 'http.server', str(PORT+1)],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            shell=True)
-    try:
-        start_server = websockets.serve(connect, "localhost", PORT)
-        time.sleep(1)
-        webbrowser.open(f'http://localhost:{PORT+1}/client')     
-        asyncio.get_event_loop().run_until_complete(start_server)
-        asyncio.get_event_loop().run_forever() 
+    # proc = subprocess.Popen(['python', '-u', '-m', 'http.server', str(PORT+1)],
+    #                         stdout=subprocess.PIPE,
+    #                         stderr=subprocess.STDOUT,
+    #                         shell=True)
+    # try:
+    start_server = websockets.serve(connect, "localhost", PORT)
+    time.sleep(1)
+    asyncio.get_event_loop().run_until_complete(start_server)
+    asyncio.get_event_loop().run_forever() 
     
-    finally:
-        proc.terminate()
-        try:
-            outs, _ = proc.communicate(timeout=0.2)
-            print('== subprocess exited with rc =', proc.returncode)
-            print(outs.decode('utf-8'))
-        except subprocess.TimeoutExpired:
-            print('subprocess did not terminate in time')
+    # finally:
+    #     proc.terminate()
+    #     try:
+    #         outs, _ = proc.communicate(timeout=0.2)
+    #         print('== subprocess exited with rc =', proc.returncode)
+    #         print(outs.decode('utf-8'))
+    #     except subprocess.TimeoutExpired:
+    #         print('subprocess did not terminate in time')
 
 def signal_handler(signal, frame): #disconnects all turtles in db
     print("[Server] Exiting")

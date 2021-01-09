@@ -3,3 +3,4 @@ __pycache__/
 env/
 server/turtle.json
 server/world.json
+client/node_modules

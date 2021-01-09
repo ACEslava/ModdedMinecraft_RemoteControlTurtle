@@ -5,7 +5,7 @@ Z = 0
 A = 0
 isFuelLow = false
 stopAutomation = false
-NGROK = "1ed92008d042.ngrok.io"
+NGROK = "2bedfddfa69a.ngrok.io"
 LABEL = ""
 
 ----BEGIN JSON LIBRARY
@@ -314,6 +314,24 @@ function move(direction)
             os.sleep(0.2)
             ws.send(textutils.serialiseJSON(queryDatabase("location")))
         end
+    elseif direction == "up" then
+        canmove = turtle.up()
+        if canmove == true then
+            Y = Y + 1
+            ws.send(textutils.serialiseJSON(information()))
+            ws.send(textutils.serialiseJSON(map()))
+            os.sleep(0.2)
+            ws.send(textutils.serialiseJSON(queryDatabase("location")))
+        end
+    elseif direction == "down" then
+        canmove = turtle.down()
+        if canmove == true then
+            Y = Y - 1
+            ws.send(textutils.serialiseJSON(information()))
+            ws.send(textutils.serialiseJSON(map()))
+            os.sleep(0.2)
+            ws.send(textutils.serialiseJSON(queryDatabase("location")))
+        end
     end
 end
 
@@ -343,6 +361,42 @@ function rotate(direction)
             os.sleep(0.2)
             ws.send(textutils.serialiseJSON(queryDatabase("location")))
         end
+    end
+end
+
+function dig(direction)
+    if direction == "front" then
+        turtle.dig("right")
+        move("forward")
+        os.sleep(0.1)
+        rotate("CW")
+        os.sleep(0.1)
+        rotate("CCW")
+        os.sleep(0.1)
+        rotate("CCW")
+    
+    elseif direction == "up" then
+        turtle.digUp("right")
+        move("up")
+        os.sleep(0.1)
+        rotate("CW")
+        os.sleep(0.1)
+        rotate("CW")
+        os.sleep(0.1)
+        rotate("CW")
+        os.sleep(0.1)
+        rotate("CW")
+    elseif direction == "down" then
+        turtle.digDown("right")
+        move("down")
+        os.sleep(0.1)
+        rotate("CW")
+        os.sleep(0.1)
+        rotate("CW")
+        os.sleep(0.1)
+        rotate("CW")
+        os.sleep(0.1)
+        rotate("CW")
     end
 end
 
@@ -391,6 +445,8 @@ function turtleCommands(command, ...)
         move(arg[1])
     elseif command == "rotate" then
         rotate(arg[1])
+    elseif command == "dig" then
+        dig(arg[1])
     end
 end
 
@@ -423,7 +479,7 @@ function websocketLoop()
                         ["recipient"] = "Server",
                         ["message"] = {
                             ["message_type"] = "error",
-                            ["content"] = "Fuel Low:" .. turtle.getFuelLevel()
+                            ["content"] = "Fuel Low: " .. turtle.getFuelLevel()
                         }
                     }
                     ws.send(textutils.serialiseJSON(message))
@@ -485,7 +541,6 @@ while true do
 	if res == 'Terminated' then
 		print("Error. If you are reading this, please type update")
         os.sleep(1)
-        os.reboot()
 		break
     end
     print(res)
