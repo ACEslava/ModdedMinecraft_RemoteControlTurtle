@@ -73,9 +73,6 @@ async def connect(websocket, path):
                         database = json.load(db)
 
                     if message.sender == "Unnamed":
-                        with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db: #opens turtle database
-                            database = json.load(db)
-
                         while True: #checks if name matches any existing turtles
                             name = next(iter(funkybob.RandomNameGenerator(members=2, separator='_')))
                             if name in database.keys():
@@ -164,11 +161,9 @@ async def connect(websocket, path):
             dcnotification = message_data("Server", "Client", "turtle_disconnect", message.sender) 
             await asyncio.create_task(broadcast(dcnotification.encodeJSON())) #sends notification to client that turtle disconnected
 
-            with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db: #removes connected tag
+            with open(os.path.join(FILE_DIR, 'turtle.json'), 'w+') as db: #removes connected tag
                 database = json.load(db)
-            database[message.sender]["connected"] = False
-
-            with open(os.path.join(FILE_DIR, 'turtle.json'), 'w') as db:
+                database[message.sender]["connected"] = False
                 json.dump(database, db, indent = 4)
 
 def main():
