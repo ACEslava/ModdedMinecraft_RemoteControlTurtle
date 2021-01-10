@@ -13,7 +13,11 @@ module.exports = {
       {
         test: /\.jsx?$/,
         exclude: /node_modules/,
-        loader: 'babel-loader'
+        loaders: ['babel-loader']
+      },
+      {
+        test: /\.(woff|woff2|eot|ttf|svg)$/,
+        loader: 'file?name=fonts/[name].[ext]'
       }
     ]
   },

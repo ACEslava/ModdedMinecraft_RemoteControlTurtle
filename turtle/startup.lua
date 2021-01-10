@@ -5,7 +5,7 @@ Z = 0
 A = 0
 isFuelLow = false
 stopAutomation = false
-NGROK = "2bedfddfa69a.ngrok.io"
+NGROK = "d4749e2942ee.ngrok.io"
 LABEL = ""
 
 ----BEGIN JSON LIBRARY
@@ -367,6 +367,9 @@ end
 function dig(direction)
     if direction == "front" then
         turtle.dig("right")
+        os.sleep(0.1)
+        map()
+        os.sleep(0.1)
         move("forward")
         os.sleep(0.1)
         rotate("CW")
@@ -374,9 +377,14 @@ function dig(direction)
         rotate("CCW")
         os.sleep(0.1)
         rotate("CCW")
+        os.sleep(0.1)
+        rotate("CW")
     
     elseif direction == "up" then
         turtle.digUp("right")
+        os.sleep(0.1)
+        map()
+        os.sleep(0.1)
         move("up")
         os.sleep(0.1)
         rotate("CW")
@@ -388,6 +396,9 @@ function dig(direction)
         rotate("CW")
     elseif direction == "down" then
         turtle.digDown("right")
+        os.sleep(0.1)
+        map()
+        os.sleep(0.1)
         move("down")
         os.sleep(0.1)
         rotate("CW")
@@ -483,6 +494,7 @@ function websocketLoop()
                         }
                     }
                     ws.send(textutils.serialiseJSON(message))
+                    turtleCommands("refuel")
                 else
                     isFuelLow = false
                 end
@@ -491,17 +503,30 @@ function websocketLoop()
                 if message["message"]["message_type"] == "turtle_custom_command" then
                     local func = loadstring(message["message"]["content"])
                     output = func()
-                    local response = {
-                        ["sender"] = LABEL,
-                        ["recipient"] = "Server",
-                        ["message"] = {
-                            ["message_type"] = "custom_command_response",
-                            ["content"] = output
+                    if output then
+                        response = {
+                            ["sender"] = LABEL,
+                            ["recipient"] = "Server",
+                            ["message"] = {
+                                ["message_type"] = "custom_command_response",
+                                ["content"] = output
+                            }
                         }
-                    }
+                    else 
+                        response = {
+                            ["sender"] = LABEL,
+                            ["recipient"] = "Server",
+                            ["message"] = {
+                                ["message_type"] = "custom_command_response",
+                                ["content"] = "Completed custom command"
+                            }
+                        }
+                    end
 
                     ws.send(textutils.serialiseJSON(response))
                     ws.send(textutils.serialiseJSON(queryDatabase("location")))
+                    os.sleep(0.2)
+                    ws.send(textutils.serialiseJSON(information()))
 
                 elseif message["message"]["message_type"] == "turtle_command" then
                     input = split(message["message"]["content"])

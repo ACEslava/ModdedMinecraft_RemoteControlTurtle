@@ -63,6 +63,28 @@ async def connect(websocket, path):
             if message.sender == "Client": #checks if sender is client
                 if message.message_type == "client_connect":
                     print(f'[Client] Connected')
+                elif "dig" in message.content:
+                    with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db:
+                        turtledatabase = json.load(db)
+                    turtle = Turtle.jsonToObject(turtledatabase[message.recipient], True)
+                    turtleloc = turtle.location
+                    x,y,z,rot = turtleloc
+                    with open(os.path.join(FILE_DIR, "world.json"), "r") as db:
+                        worlddatabase = json.load(db)
+                    if message.content == "dig up":
+                        del worlddatabase[f"{x},{y+1},{z}"]
+                    elif message.content == "dig down":
+                        del worlddatabase[f"{x},{y-1},{z}"]
+                    elif message.content == "dig front":
+                        if rot == 0: z -= 1
+                        elif rot == 90: x += 1
+                        elif rot == 180: z += 1
+                        elif rot == 270: x -= 1
+                        del worlddatabase[f"{x},{y},{z}"]
+
+                    with open(os.path.join(FILE_DIR, 'world.json'), 'w') as db:
+                        json.dump(worlddatabase, db, indent=4)
+
                     
             else: #thus sender is turtle if not client or server
                 TURTLES[message.sender] = websocket #adds turtle to current working list of connected turtles
@@ -73,6 +95,9 @@ async def connect(websocket, path):
                         database = json.load(db)
 
                     if message.sender == "Unnamed":
+                        with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db: #opens turtle database
+                            database = json.load(db)
+
                         while True: #checks if name matches any existing turtles
                             name = next(iter(funkybob.RandomNameGenerator(members=2, separator='_')))
                             if name in database.keys():
@@ -146,6 +171,7 @@ async def connect(websocket, path):
 
                 elif message.message_type == "custom_command_response":
                     print(message.content)
+
     except Exception as e:
         print(e)
         pass
@@ -161,30 +187,32 @@ async def connect(websocket, path):
             dcnotification = message_data("Server", "Client", "turtle_disconnect", message.sender) 
             await asyncio.create_task(broadcast(dcnotification.encodeJSON())) #sends notification to client that turtle disconnected
 
-            with open(os.path.join(FILE_DIR, 'turtle.json'), 'w+') as db: #removes connected tag
+            with open(os.path.join(FILE_DIR, 'turtle.json'), 'r') as db: #removes connected tag
                 database = json.load(db)
-                database[message.sender]["connected"] = False
+            database[message.sender]["connected"] = False
+
+            with open(os.path.join(FILE_DIR, 'turtle.json'), 'w') as db:
                 json.dump(database, db, indent = 4)
 
 def main():
-    # proc = subprocess.Popen(['python', '-u', '-m', 'http.server', str(PORT+1)],
-    #                         stdout=subprocess.PIPE,
-    #                         stderr=subprocess.STDOUT,
-    #                         shell=True)
-    # try:
-    start_server = websockets.serve(connect, "localhost", PORT)
-    time.sleep(1)
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever() 
+    proc = subprocess.Popen(['python', '-u', '-m', 'http.server', str(PORT+1)],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            shell=True)
+    try:
+        start_server = websockets.serve(connect, "localhost", PORT)
+        time.sleep(1)
+        asyncio.get_event_loop().run_until_complete(start_server)
+        asyncio.get_event_loop().run_forever() 
     
-    # finally:
-    #     proc.terminate()
-    #     try:
-    #         outs, _ = proc.communicate(timeout=0.2)
-    #         print('== subprocess exited with rc =', proc.returncode)
-    #         print(outs.decode('utf-8'))
-    #     except subprocess.TimeoutExpired:
-    #         print('subprocess did not terminate in time')
+    finally:
+        proc.terminate()
+        try:
+            outs, _ = proc.communicate(timeout=0.2)
+            print('== subprocess exited with rc =', proc.returncode)
+            print(outs.decode('utf-8'))
+        except subprocess.TimeoutExpired:
+            print('subprocess did not terminate in time')
 
 def signal_handler(signal, frame): #disconnects all turtles in db
     print("[Server] Exiting")
